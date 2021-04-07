@@ -11,7 +11,7 @@ gem install colorize packetgen arp_scan tty
 
 # Usage
 ```
-# ruby main.rb
+# ruby rarp.rb
 ```
 
 ## Social Media
