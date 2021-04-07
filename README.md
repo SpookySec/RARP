@@ -1,7 +1,7 @@
 # RARP
-A fun (toolkit) for fun networking messing around
+A fun (toolkit) for messing around with networks 🙂
 - Nice-ish UI
-- Deauth comming soon :eyes:
+- Deauth comming soon 👀
 
 # Installation
 ```
