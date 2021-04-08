@@ -32,27 +32,16 @@ loop do
 		when "scan"
 			rarp.scan
 		when "info"
-			if input[1].nil?
-				if rarp.ips.empty?
-					warning("Please run 'scan' or supply a manual ip")
-				else
-					begin
-						parsed = rarp.ipinfo prompt.select("Select a host:", rarp.ips)
-						info("IP : #{parsed[0]}")
-						info("MAC: #{parsed[1]}")
-						info("OUI: #{parsed[2]}")
-					rescue
-						warning("Host seems down or invalid!")
-					end
-				end
+			if rarp.ips.empty?
+				error("No IPs found in buffer!")
 			else
 				begin
-					parsed = rarp.ipinfo input[1]
+					parsed = rarp.ipinfo prompt.select("Select a host:", rarp.ips)
 					info("IP : #{parsed[0]}")
 					info("MAC: #{parsed[1]}")
 					info("OUI: #{parsed[2]}")
 				rescue
-					warning("An error occured")
+					warning("Host seems down or invalid!")
 				end
 			end
 		when "help"
@@ -60,11 +49,25 @@ loop do
 		when "config"
 			rarp.config
 		when "hosts"
-			rarp.ips.each do |ip|
-				info(ip)
+			unless rarp.ips.empty?
+				rarp.ips.each do |ip|
+					info(ip)
+				end
+			else
+				error("No IPs found in buffer!")
 			end
 		when "attack"
-			rarp.attack
+			targets = Hash[rarp.arp_hosts.collect {|host| [host.ip_addr, host.mac] } ]
+			unless rarp.ips.empty?
+				target = prompt.select("Select a host:", targets)
+				print "\e[1A\e[K"
+				rarp.attack(target)
+			else
+				error("No IPs found in buffer!")
+			end
+		when "quit"
+			puts "\e[2A"
+			terminate.call
 		end
 	end
 end
