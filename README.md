@@ -1,5 +1,5 @@
 # RARP
-A fun (toolkit) for messing around with networks 🙂
+A fun (toolkit) written in ruby for messing around with networks 🙂
 - Nice-ish UI
 - Deauth comming soon 👀
 
